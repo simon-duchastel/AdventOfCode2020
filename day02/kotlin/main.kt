@@ -3,12 +3,17 @@ import kotlin.io.readLine
 import java.io.File
 import java.lang.IllegalArgumentException
 
+enum class CompilationMode {
+    COUNT_VERIFICATION,
+    POSITIONAL_VERIFICATION
+}
+val COMPILATION_MODE = CompilationMode.COUNT_VERIFICATION
+
 /**
  *  Returns the number of correct passwords. Each invocation
  *  of getNextLine returns a new password line in the format 
- *  "min-max char: password" or null if there are no more password
- *  lines. The password is correct if it has at least min and
- *  at most max instances of the character char
+ *  "first-second char: password" or null if there are no more
+ *  password lines.
  */
 fun processPasswords(getNextLine: () -> String?): Int {
     var numCorrectPasswords = 0
@@ -17,14 +22,16 @@ fun processPasswords(getNextLine: () -> String?): Int {
     while (nextToProcess != null) {
         try {
             val processedString = nextToProcess.split(": ", " ", "-")
-            val min: Int = processedString[0].toInt()
-            val max: Int = processedString[1].toInt()
+            val first: Int = processedString[0].toInt()
+            val second: Int = processedString[1].toInt()
             val targetChar: Char = processedString[2].single()
             val password: String = processedString[3]
 
-            var numTargetChars = 0
-            password.map { if (it == targetChar) numTargetChars++ }
-            if (numTargetChars >= min && numTargetChars <= max) numCorrectPasswords++            
+            val isCorrect = when (COMPILATION_MODE) {
+                CompilationMode.COUNT_VERIFICATION -> verifyPasswordByCount(password, first, second, targetChar)
+                CompilationMode.POSITIONAL_VERIFICATION -> verifyPasswordByPosition(password, first, second, targetChar)
+            }
+            if (isCorrect) numCorrectPasswords++            
         } catch (ex: NumberFormatException) {
             exitWithMessage("Unable to process password line: unable to parse integer")
         } catch (ex: IllegalArgumentException) {
@@ -33,6 +40,27 @@ fun processPasswords(getNextLine: () -> String?): Int {
         nextToProcess = getNextLine()
     }
     return numCorrectPasswords
+}
+
+/**
+ *  Returns true if the password is correct, false otherwise. The password is correct
+ *  if it has at least min and at most max instances of the character targetChar
+ */
+fun verifyPasswordByCount(password: String, min: Int, max: Int, targetChar: Char): Boolean {
+    var numTargetChars = 0
+    password.map { if (it == targetChar) numTargetChars++ }
+    return numTargetChars >= min && numTargetChars <= max
+}
+
+/**
+ *  Returns true if the password is correct, false otherwise. The password is correct
+ *  if either the character at position firstPosition or the character at position
+ *  secondPosition match targetChar, but not if both match.
+ */
+fun verifyPasswordByPosition(password: String, firstPosition: Int, secondPosition: Int, targetChar: Char): Boolean {
+    val firstPositionMatches = password.getOrNull(firstPosition - 1) == targetChar
+    val secondPositionMatches = password.getOrNull(secondPosition - 1) == targetChar
+    return firstPositionMatches xor secondPositionMatches
 }
 
 fun main(args: Array<String>) {
