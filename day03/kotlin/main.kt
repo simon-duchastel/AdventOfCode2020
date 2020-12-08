@@ -5,7 +5,7 @@ enum class CompilationMode {
     NO_MEMORY_PART_1,
     IN_MEMORY_PART_2,
 }
-val COMPILATION_MODE = CompilationMode.NO_MEMORY_PART_1
+val COMPILATION_MODE = CompilationMode.IN_MEMORY_PART_1
 
 fun main() {
     val numTrees = when (COMPILATION_MODE) {
@@ -15,11 +15,19 @@ fun main() {
         }
         CompilationMode.NO_MEMORY_PART_1 -> {
             println("Using No Memory Part 1")
+            readLine() // Read the first line to account for the fact that we should start at the first level of the slope
             sledDownSlope(::readLine, 3, 1)
         }
         CompilationMode.IN_MEMORY_PART_2 -> {
             println("Using In Memory Part 2")
-            sledDownSlope(::readLine, 3, 1)
+            readLine() // Read the first line to account for the fact that we should start at the first level of the slope
+            SlopeMap(::readLine).let { slope ->
+                sledDownSlope(slope.SlopeTraverser()::goDownOneLevel, 1, 1) * 
+                sledDownSlope(slope.SlopeTraverser()::goDownOneLevel, 3, 1) * 
+                sledDownSlope(slope.SlopeTraverser()::goDownOneLevel, 5, 1) * 
+                sledDownSlope(slope.SlopeTraverser()::goDownOneLevel, 7, 1) * 
+                sledDownSlope(slope.SlopeTraverser()::goDownOneLevel, 1, 2)
+            }
         }
     }
     println("$numTrees trees encountered")
@@ -31,7 +39,7 @@ fun sledDownSlope(goDownOneLevel: () -> String?,
                 horizontalPosition: Int = 0): Int = 
     repeat(verticalTraversals - 1) { goDownOneLevel() ?: return@sledDownSlope 0 }.let {
         goDownOneLevel()?.toCharArray()?.let { level ->
-            (if (level[horizontalPosition % level.size].isTree()) 1 else 0) + 
+            (if (level[(horizontalPosition + horizontalTraversals) % level.size].isTree()) 1 else 0) + 
                 sledDownSlope(
                     goDownOneLevel,
                     horizontalTraversals,
@@ -43,16 +51,28 @@ fun sledDownSlope(goDownOneLevel: () -> String?,
 
 fun Char.isTree() = this == '#'
 
+class SlopeMap(getNextLevel: () -> String?) {
+    val levels: List<String> = loadAllLevels(getNextLevel)
+
+    private fun loadAllLevels(getNextLevel: () -> String?, acc: List<String> = emptyList()): List<String> =
+        getNextLevel()?.let { newLevel -> loadAllLevels(getNextLevel, acc.plus(newLevel)) } ?: acc
+
+    inner class SlopeTraverser() {
+        private var currentLevel = 0
+        fun goDownOneLevel() = levels.getOrNull(currentLevel).also { currentLevel++ }
+    }
+}
+
 
 // In-memory solution for Part 1
 
 fun inMemoryCountTrees(getNextInputRow: () -> String?): Int {
-    val map = HorizontalScrollingMatrix<Square>().loadAll { getNextInputRow()?.map(Char::toSquare) }
+    val slopeMap = HorizontalScrollingMatrix<Square>().loadAll { getNextInputRow()?.map(Char::toSquare) }
     
     var horizontalPosition = 0
     var numTrees = 0
-    for (verticalPosition in 0 until map.height()) {
-        if (map.get(horizontalPosition, verticalPosition) is Tree) numTrees++
+    for (verticalPosition in 0 until slopeMap.height()) {
+        if (slopeMap.get(horizontalPosition, verticalPosition) is Tree) numTrees++
         horizontalPosition += 3
     }
     return numTrees
