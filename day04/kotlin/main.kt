@@ -82,7 +82,6 @@ fun Password.validate(): Password? =
         ?.validateEyeColor()
         ?.validatePassportId()
 
-
 fun Password.validateBirthYear(): Password? = if (birthYear.toIntOrNull() in 1920..2002) this else null
 fun Password.validateIssueYear(): Password? = if (issueYear.toIntOrNull() in 2010..2020) this else null
 fun Password.validateExpirationYear(): Password? = if (expirationYear.toIntOrNull() in 2020..2030) this else null
